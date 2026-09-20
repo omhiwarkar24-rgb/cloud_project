@@ -1,0 +1,6 @@
+{
+  "default_workload_scale_factor": 0.5,
+  "minimum_scale_factor": 0.1,
+  "maximum_scale_factor": 0.9,
+  "label": "Controlled Experimental Evaluation"
+}

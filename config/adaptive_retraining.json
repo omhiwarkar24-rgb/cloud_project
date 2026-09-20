@@ -1,0 +1,9 @@
+{
+  "minimum_new_samples": 20,
+  "cooldown_seconds": 3600,
+  "required_drift_status": "DRIFT DETECTED",
+  "target_model": "security_binary_xgboost",
+  "validation_criteria": "existing_pipeline_f1_or_accuracy_improvement",
+  "live_feature_source": "LIVE_HOST_TELEMETRY",
+  "compatible_training_source": "PROCESSED_SECURITY_FEATURES"
+}

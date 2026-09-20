@@ -1,0 +1,11 @@
+Task,Model,Accuracy,Precision (Binary/Weighted),Recall,F1-Score,ROC-AUC,FPR,FNR,Model_Path,CM_Path
+Binary,Logistic Regression,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\logistic_regression_binary.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_binary_logistic_regression.png
+Binary,Decision Tree,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\decision_tree_binary.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_binary_decision_tree.png
+Binary,Random Forest,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\random_forest_binary.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_binary_random_forest.png
+Binary,XGBoost,0.998,0.9957356076759062,1.0,0.9978632478632479,1.0,0.00375234521575985,0.0,D:\ML_CP\adaptive_cloud_project\models\security\xgboost_binary.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_binary_xgboost.png
+Binary,MLP Neural Network,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\mlp_neural_network_binary.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_binary_mlp_neural_network.png
+Multiclass,Logistic Regression,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\logistic_regression_multiclass.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_multiclass_logistic_regression.png
+Multiclass,Decision Tree,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\decision_tree_multiclass.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_multiclass_decision_tree.png
+Multiclass,Random Forest,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\random_forest_multiclass.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_multiclass_random_forest.png
+Multiclass,XGBoost,1.0,1.0,1.0,1.0,1.0,0.0,0.0,D:\ML_CP\adaptive_cloud_project\models\security\xgboost_multiclass.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_multiclass_xgboost.png
+Multiclass,MLP Neural Network,0.999,0.999001872659176,0.999,0.9989843395713034,1.0,0.00014285714285714287,0.001,D:\ML_CP\adaptive_cloud_project\models\security\mlp_neural_network_multiclass.joblib,D:\ML_CP\adaptive_cloud_project\results\security\plots\cm_multiclass_mlp_neural_network.png

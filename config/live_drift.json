@@ -1,0 +1,14 @@
+{
+  "features": [
+    "cpu_utilization",
+    "ram_utilization",
+    "disk_utilization",
+    "process_count",
+    "network_activity_delta_mb"
+  ],
+  "reference_window_size": 30,
+  "current_window_size": 20,
+  "minimum_samples": 10,
+  "p_value_threshold": 0.05,
+  "ks_stat_threshold": 0.15
+}

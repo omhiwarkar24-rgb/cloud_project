@@ -1,0 +1,11 @@
+Task,Model,Accuracy,Precision,Recall,F1-Score,ROC-AUC
+Binary,Logistic Regression,1.0,1.0,1.0,1.0,1.0
+Binary,Decision Tree,1.0,1.0,1.0,1.0,1.0
+Binary,Random Forest,1.0,1.0,1.0,1.0,1.0
+Binary,XGBoost,0.998,0.9957,1.0,0.9979,1.0
+Binary,MLP Neural Network,1.0,1.0,1.0,1.0,1.0
+Multiclass,Logistic Regression,1.0,1.0,1.0,1.0,1.0
+Multiclass,Decision Tree,1.0,1.0,1.0,1.0,1.0
+Multiclass,Random Forest,1.0,1.0,1.0,1.0,1.0
+Multiclass,XGBoost,1.0,1.0,1.0,1.0,1.0
+Multiclass,MLP Neural Network,0.999,0.999,0.999,0.999,1.0

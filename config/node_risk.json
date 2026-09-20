@@ -1,0 +1,12 @@
+{
+  "weights": {
+    "security": 0.5,
+    "maintenance": 0.5
+  },
+  "overall_thresholds": {
+    "low_max": 0.3,
+    "medium_max": 0.6,
+    "high_max": 0.85
+  },
+  "missing_signal_policy": "available_only"
+}

@@ -1,0 +1,7 @@
+{
+  "cpu_high_threshold": 85.0,
+  "memory_high_threshold": 85.0,
+  "disk_high_threshold": 85.0,
+  "health_risk_threshold": 0.7,
+  "security_risk_threshold": 0.6
+}

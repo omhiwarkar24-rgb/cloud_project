@@ -1,0 +1,129 @@
+"""
+server_client.py - HTTP client for the Central Telemetry REST API.
+
+Handles:
+  - Node registration  (POST /register)
+  - Telemetry ingestion (POST /telemetry)
+  - Heartbeat          (POST /heartbeat)
+  - Exponential back-off retry on any connection failure
+  - Transparent reconnection — callers never need to handle URLError
+"""
+
+import json
+import time
+import socket
+import platform
+import urllib.request
+import urllib.error
+
+from node_agent.config import (
+    REGISTER_URL,
+    TELEMETRY_URL,
+    HEARTBEAT_URL,
+    HTTP_TIMEOUT_SEC,
+    RETRY_BASE_WAIT_SEC,
+    MAX_RETRY_WAIT_SEC,
+)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Low-level HTTP helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _post_json(url: str, payload: dict, timeout: float = HTTP_TIMEOUT_SEC):
+    """
+    POST a JSON payload to *url*.
+    Returns (True, response_dict) on success.
+    Returns (False, None) on any network / HTTP error (caller decides retry logic).
+    """
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req  = urllib.request.Request(
+            url, data=data,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent":   "LiveNodeAgent/2.0",
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+            return True, body
+    except urllib.error.HTTPError as e:
+        print(f"[CLIENT HTTP ERROR] {url} -> HTTP {e.code}: {e.reason}")
+    except urllib.error.URLError as e:
+        print(f"[CLIENT CONN WARN] Cannot reach server at {url}: {e.reason}")
+    except Exception as e:
+        print(f"[CLIENT ERROR] Unexpected error posting to {url}: {e}")
+    return False, None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Registration
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _build_register_payload(node_id: str) -> dict:
+    hostname = socket.gethostname()
+    import psutil
+    vm   = psutil.virtual_memory()
+    disk = psutil.disk_usage("C:\\" if platform.system() == "Windows" else "/")
+    return {
+        "node_id":          node_id,
+        "hostname":         hostname,
+        "operating_system": f"{platform.system()} {platform.release()} ({platform.architecture()[0]})",
+        "hardware_info": {
+            "cpu_count_logical":  psutil.cpu_count(logical=True),
+            "cpu_count_physical": psutil.cpu_count(logical=False),
+            "ram_total_mb":       round(vm.total / (1024 ** 2), 2),
+            "disk_total_gb":      round(disk.total / (1024 ** 3), 2),
+        },
+    }
+
+
+def register_with_retry(node_id: str) -> bool:
+    """
+    Attempts to register the node with the central server.
+    Retries indefinitely with exponential back-off until the server accepts the
+    registration.  Returns True once registered successfully.
+    """
+    payload  = _build_register_payload(node_id)
+    wait_sec = RETRY_BASE_WAIT_SEC
+    attempt  = 0
+
+    while True:
+        attempt += 1
+        ok, _ = _post_json(REGISTER_URL, payload)
+        if ok:
+            print(f"[REGISTER] Node '{node_id}' registered with central server. (attempt {attempt})")
+            return True
+
+        print(f"[REGISTER] Server unavailable. Retrying in {wait_sec}s "
+              f"(attempt {attempt}) ...")
+        time.sleep(wait_sec)
+        wait_sec = min(wait_sec * 2, MAX_RETRY_WAIT_SEC)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Telemetry
+# ─────────────────────────────────────────────────────────────────────────────
+
+def send_telemetry(payload: dict) -> bool:
+    """
+    Sends one telemetry snapshot.  Returns True on success, False otherwise.
+    Does NOT retry — the calling loop will simply try again on the next tick.
+    """
+    ok, _ = _post_json(TELEMETRY_URL, payload)
+    return ok
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Heartbeat
+# ─────────────────────────────────────────────────────────────────────────────
+
+def send_heartbeat(node_id: str) -> bool:
+    """
+    Sends a lightweight heartbeat.  Returns True on success.
+    Does NOT retry — the heartbeat thread will retry on the next scheduled beat.
+    """
+    ok, _ = _post_json(HEARTBEAT_URL, {"node_id": node_id})
+    return ok
