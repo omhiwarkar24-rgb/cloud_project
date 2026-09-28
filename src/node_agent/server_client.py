@@ -12,18 +12,34 @@ Handles:
 import json
 import time
 import socket
+import os
+import sys
 import platform
 import urllib.request
 import urllib.error
 
-from node_agent.config import (
-    REGISTER_URL,
-    TELEMETRY_URL,
-    HEARTBEAT_URL,
-    HTTP_TIMEOUT_SEC,
-    RETRY_BASE_WAIT_SEC,
-    MAX_RETRY_WAIT_SEC,
-)
+_AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _AGENT_DIR not in sys.path:
+    sys.path.insert(0, _AGENT_DIR)
+
+try:
+    from node_agent.config import (
+        REGISTER_URL,
+        TELEMETRY_URL,
+        HEARTBEAT_URL,
+        HTTP_TIMEOUT_SEC,
+        RETRY_BASE_WAIT_SEC,
+        MAX_RETRY_WAIT_SEC,
+    )
+except ImportError:
+    from config import (
+        REGISTER_URL,
+        TELEMETRY_URL,
+        HEARTBEAT_URL,
+        HTTP_TIMEOUT_SEC,
+        RETRY_BASE_WAIT_SEC,
+        MAX_RETRY_WAIT_SEC,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -97,8 +113,16 @@ def register_with_retry(node_id: str) -> bool:
             print(f"[REGISTER] Node '{node_id}' registered with central server. (attempt {attempt})")
             return True
 
-        print(f"[REGISTER] Server unavailable. Retrying in {wait_sec}s "
-              f"(attempt {attempt}) ...")
+        if attempt == 2 and ("localhost" in REGISTER_URL or "127.0.0.1" in REGISTER_URL):
+            print("\n" + "!" * 68)
+            print("[CONNECTION TIP] The node agent is attempting to connect to 'localhost:8000'.")
+            print("If this node is running on a SEPARATE LAPTOP / MACHINE, 'localhost' will NOT")
+            print("reach the Central Server! Run collector with your Central Server's IP:")
+            print("    python collector.py --server-url http://<CENTRAL_SERVER_IP>:8000")
+            print("Or create a 'server_url.txt' file in this folder containing that address.")
+            print("!" * 68 + "\n")
+
+        print(f"[REGISTER] Server unavailable at {REGISTER_URL}. Retrying in {wait_sec}s (attempt {attempt}) ...")
         time.sleep(wait_sec)
         wait_sec = min(wait_sec * 2, MAX_RETRY_WAIT_SEC)
 

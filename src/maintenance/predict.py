@@ -51,6 +51,20 @@ def _preprocess_maintenance_input(df_raw, pipeline):
 
     df = df_raw.copy()
 
+    # Canonicalize telemetry / raw column names to expected model feature names
+    rename_map = {
+        "cpu_utilization": "CPU_utilization",
+        "ram_utilization": "Memory_utilization",
+        "memory_utilization": "Memory_utilization",
+        "disk_utilization": "Disk_utilization",
+        "load_1min": "Load_1min",
+        "load_5min": "Load_5min",
+        "load_15min": "Load_15min",
+        "duration_sec": "Duration_sec",
+        "server_type": "Server_Type",
+    }
+    df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+
     # Feature Engineering: Resource Pressure
     if 'CPU_utilization' in df.columns and 'Memory_utilization' in df.columns:
         df['Resource_pressure'] = (pd.to_numeric(df['CPU_utilization'], errors='coerce') * pd.to_numeric(df['Memory_utilization'], errors='coerce')) / 100.0

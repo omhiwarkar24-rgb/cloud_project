@@ -1,4 +1,4 @@
 Metric,Before Adaptation (Old Model),After Adaptation (New Model)
 Accuracy,0.75,1.0
 F1-Score,0.8571428571428571,1.0
-ROC-AUC,0.7859555555555555,1.0
+ROC-AUC,0.785837037037037,1.0

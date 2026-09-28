@@ -130,7 +130,7 @@ def _print_registry(server_url: str):
     import urllib.request, json
     try:
         url = f"{server_url}/nodes"
-        with urllib.request.urlopen(url, timeout=5) as resp:
+        with urllib.request.urlopen(url, timeout=15) as resp:
             data = json.loads(resp.read())
         print(f"\n  Total nodes in registry: {data['total_nodes']}")
         for n in data["nodes"]:

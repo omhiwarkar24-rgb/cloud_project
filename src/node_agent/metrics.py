@@ -3,6 +3,8 @@ metrics.py - Telemetry Metric Collector module using psutil and platform.
 Collects CPU, RAM, Disk, Network, Disk I/O, Temperature, Process Count, OS, and Host details.
 """
 
+import os
+import time
 import socket
 import platform
 import psutil
@@ -75,6 +77,28 @@ def collect_node_telemetry(node_id: str) -> dict:
     cpu_temp = get_cpu_temperature()
     process_count = len(psutil.pids())
 
+    # Load averages (1-min, 5-min, 15-min) using psutil.getloadavg()
+    load_1min, load_5min, load_15min = 0.0, 0.0, 0.0
+    if hasattr(psutil, "getloadavg"):
+        try:
+            loads = psutil.getloadavg()
+            if loads and len(loads) == 3:
+                load_1min = round(float(loads[0]), 2)
+                load_5min = round(float(loads[1]), 2)
+                load_15min = round(float(loads[2]), 2)
+        except Exception:
+            pass
+
+    # Execution / Host uptime duration in seconds
+    try:
+        boot_time = psutil.boot_time()
+        duration_sec = int(time.time() - boot_time)
+    except Exception:
+        duration_sec = 0
+
+    # Node server type / role (configurable via env var, defaults to ComputeNode)
+    server_type = os.getenv("NODE_SERVER_TYPE", "ComputeNode")
+
     payload = {
         "node_id": node_id,
         "hostname": hostname,
@@ -99,7 +123,12 @@ def collect_node_telemetry(node_id: str) -> dict:
             "disk_write_bytes": disk_write_bytes,
             "disk_read_mb": disk_read_mb,
             "disk_write_mb": disk_write_mb,
-            "process_count": process_count
+            "process_count": process_count,
+            "load_1min": load_1min,
+            "load_5min": load_5min,
+            "load_15min": load_15min,
+            "duration_sec": duration_sec,
+            "server_type": server_type
         }
     }
     return payload
@@ -107,6 +136,7 @@ def collect_node_telemetry(node_id: str) -> dict:
 
 if __name__ == "__main__":
     import json
+    import socket
     # Call cpu_percent once to initialize baseline
     psutil.cpu_percent(interval=1.0)
-    print(json.dumps(collect_node_telemetry("test_node_01"), indent=2))
+    print(json.dumps(collect_node_telemetry(f"node_{socket.gethostname().lower()}"), indent=2))

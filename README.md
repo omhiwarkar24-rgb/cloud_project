@@ -94,7 +94,7 @@ When operational environments shift (distribution drift), static models experien
 ### 1. Prerequisites & Installation
 ```bash
 # Clone or navigate to project directory
-cd d:\ML_CP\adaptive_cloud_project
+cd .
 
 # Install required packages
 pip install pandas numpy scikit-learn xgboost matplotlib seaborn plotly streamlit joblib shap scipy

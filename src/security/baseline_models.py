@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import shap
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
@@ -148,6 +147,7 @@ def train_and_evaluate_security_baselines():
         # SHAP for the best model (e.g., Random Forest or XGBoost)
         if name in ["Random Forest", "XGBoost"]:
             try:
+                import shap
                 explainer = shap.TreeExplainer(model)
                 shap_values = explainer.shap_values(X_test[:500]) # subset to save time
                 shap.summary_plot(shap_values, X_test[:500], feature_names=feature_cols, show=False)
@@ -155,11 +155,14 @@ def train_and_evaluate_security_baselines():
                 plt.savefig(shap_path, dpi=300, bbox_inches='tight')
                 plt.close()
             except Exception as e:
-                print(f"SHAP failed for {name}: {e}")
+                pass
 
         # Save trained model
         model_save_path = os.path.join(MODEL_DIR, f"{safe_name}_binary.joblib")
         joblib.dump(model, model_save_path)
+
+        rel_model_path = os.path.relpath(model_save_path, BASE_DIR).replace("\\", "/")
+        rel_cm_path = os.path.relpath(cm_path, BASE_DIR).replace("\\", "/")
 
         results_list.append({
             "Task": "Binary",
@@ -171,8 +174,8 @@ def train_and_evaluate_security_baselines():
             "ROC-AUC": auc,
             "FPR": fpr,
             "FNR": fnr,
-            "Model_Path": model_save_path,
-            "CM_Path": cm_path
+            "Model_Path": rel_model_path,
+            "CM_Path": rel_cm_path
         })
         print(f"  Accuracy: {acc:.4f} | F1: {f1:.4f} | ROC-AUC: {auc:.4f} | FPR: {fpr:.4f}")
 
@@ -221,6 +224,9 @@ def train_and_evaluate_security_baselines():
         model_save_path = os.path.join(MODEL_DIR, f"{safe_name}_multiclass.joblib")
         joblib.dump(model, model_save_path)
 
+        rel_model_path = os.path.relpath(model_save_path, BASE_DIR).replace("\\", "/")
+        rel_cm_path = os.path.relpath(cm_path, BASE_DIR).replace("\\", "/")
+
         results_list.append({
             "Task": "Multiclass",
             "Model": name,
@@ -231,8 +237,8 @@ def train_and_evaluate_security_baselines():
             "ROC-AUC": auc,
             "FPR": fpr,
             "FNR": fnr,
-            "Model_Path": model_save_path,
-            "CM_Path": cm_path
+            "Model_Path": rel_model_path,
+            "CM_Path": rel_cm_path
         })
         print(f"  Accuracy: {acc:.4f} | F1 (Weighted): {f1:.4f} | ROC-AUC (OvR): {auc:.4f} | FPR: {fpr:.4f}")
 

@@ -1,6 +1,6 @@
 Model,Accuracy,Precision,Recall,F1-Score,ROC-AUC,Model_Path,CM_Path
-Logistic Regression,0.9,0.75,0.9617224880382776,0.8427672955974843,0.9590515525917802,D:\ML_CP\adaptive_cloud_project\models\maintenance\logistic_regression_maintenance.joblib,D:\ML_CP\adaptive_cloud_project\results\maintenance\plots\cm_logistic_regression.png
-Decision Tree,0.8986666666666666,0.7587548638132295,0.9330143540669856,0.8369098712446352,0.9282738858573084,D:\ML_CP\adaptive_cloud_project\models\maintenance\decision_tree_maintenance.joblib,D:\ML_CP\adaptive_cloud_project\results\maintenance\plots\cm_decision_tree.png
-Random Forest,0.9133333333333332,0.7666666666666667,0.9904306220095692,0.8643006263048016,0.9533116946289434,D:\ML_CP\adaptive_cloud_project\models\maintenance\random_forest_maintenance.joblib,D:\ML_CP\adaptive_cloud_project\results\maintenance\plots\cm_random_forest.png
-XGBoost,0.9053333333333332,0.7593984962406015,0.9665071770334928,0.8505263157894737,0.9581317602525892,D:\ML_CP\adaptive_cloud_project\models\maintenance\xgboost_maintenance.joblib,D:\ML_CP\adaptive_cloud_project\results\maintenance\plots\cm_xgboost.png
-MLP Neural Network,0.896,0.7811158798283262,0.8708133971291866,0.8235294117647058,0.959060396748888,D:\ML_CP\adaptive_cloud_project\models\maintenance\mlp_neural_network_maintenance.joblib,D:\ML_CP\adaptive_cloud_project\results\maintenance\plots\cm_mlp_neural_network.png
+Logistic Regression,0.968,0.2727272727272727,1.0,0.4285714285714285,0.9955015744489428,models/maintenance/logistic_regression_maintenance.joblib,results/maintenance/plots/cm_logistic_regression.png
+Decision Tree,0.9853333333333332,0.4,0.4444444444444444,0.4210526315789473,0.7181736392262709,models/maintenance/decision_tree_maintenance.joblib,results/maintenance/plots/cm_decision_tree.png
+Random Forest,0.9893333333333332,0.5384615384615384,0.7777777777777778,0.6363636363636364,0.9929524666366772,models/maintenance/random_forest_maintenance.joblib,results/maintenance/plots/cm_random_forest.png
+XGBoost,0.992,0.6,1.0,0.75,0.9946018893387314,models/maintenance/xgboost_maintenance.joblib,results/maintenance/plots/cm_xgboost.png
+MLP Neural Network,0.9893333333333332,0.5555555555555556,0.5555555555555556,0.5555555555555556,0.9739091318038686,models/maintenance/mlp_neural_network_maintenance.joblib,results/maintenance/plots/cm_mlp_neural_network.png

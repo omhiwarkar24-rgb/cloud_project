@@ -119,6 +119,9 @@ def train_and_evaluate_maintenance_baselines():
         model_save_path = os.path.join(MODEL_DIR, save_fname)
         joblib.dump(model, model_save_path)
 
+        rel_model_path = os.path.relpath(model_save_path, BASE_DIR).replace("\\", "/")
+        rel_cm_path = os.path.relpath(cm_path, BASE_DIR).replace("\\", "/")
+
         results_list.append({
             "Model": name,
             "Accuracy": acc,
@@ -126,8 +129,8 @@ def train_and_evaluate_maintenance_baselines():
             "Recall": rec,
             "F1-Score": f1,
             "ROC-AUC": auc,
-            "Model_Path": model_save_path,
-            "CM_Path": cm_path
+            "Model_Path": rel_model_path,
+            "CM_Path": rel_cm_path
         })
         print(f"  Accuracy: {acc:.4f} | Precision: {prec:.4f} | Recall: {rec:.4f} | F1: {f1:.4f} | ROC-AUC: {auc:.4f}")
 

@@ -4,6 +4,9 @@ test_predict.py - Standalone validation runner for Security Prediction API.
 
 import os
 import sys
+import warnings
+warnings.filterwarnings("ignore")
+
 import pandas as pd
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,10 +29,22 @@ print("Attack Result:", res_attack)
 
 print("\n=== 3. BATCH PREDICTION (20 ROWS) ===")
 df_batch = predict_attack(df_raw.head(20))
-print(df_batch[['proto', 'service', 'state', 'dur', 'predicted_attack', 'confidence_probability', 'risk_level']].head(5))
+cols = [c for c in ['proto', 'service', 'state', 'dur', 'predicted_attack', 'confidence_probability', 'risk_level'] if c in df_batch.columns]
+print(df_batch[cols].head(5))
 
 print("\n=== 4. INPUT VALIDATION EDGE-CASE TEST ===")
+# 4a. Graceful fallback on partial input (default imputation)
+res_partial = predict_attack({"dur": 0.5, "proto": "tcp"})
+print("Graceful fallback on partial input:", res_partial)
+
+# 4b. Strict validation error handling
 try:
-    predict_attack({"dur": 0.5, "proto": "tcp"})
+    predict_attack({"dur": 0.5, "proto": "tcp"}, strict=True)
 except KeyError as e:
-    print("Successfully caught missing columns validation error:", e)
+    print("Successfully caught missing columns validation error (strict mode):", e)
+
+# 4c. Unsupported input type handling
+try:
+    predict_attack([1, 2, 3])
+except TypeError as e:
+    print("Successfully caught unsupported input type error:", e)

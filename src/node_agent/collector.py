@@ -33,23 +33,40 @@ AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR   = os.path.dirname(AGENT_DIR)
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
+if AGENT_DIR not in sys.path:
+    sys.path.insert(0, AGENT_DIR)
 # ─────────────────────────────────────────────────────────────────────────────
 
 import psutil
 
-from node_agent.config import (
-    TELEMETRY_INTERVAL_SEC,
-    HEARTBEAT_INTERVAL_SEC,
-    ENABLE_HTTP_POST,
-    SERVER_BASE_URL,
-)
-from node_agent.id_generator import get_or_create_node_id
-from node_agent.metrics      import collect_node_telemetry
-from node_agent.server_client import (
-    register_with_retry,
-    send_telemetry,
-    send_heartbeat,
-)
+try:
+    from node_agent.config import (
+        TELEMETRY_INTERVAL_SEC,
+        HEARTBEAT_INTERVAL_SEC,
+        ENABLE_HTTP_POST,
+        SERVER_BASE_URL,
+    )
+    from node_agent.id_generator import get_or_create_node_id
+    from node_agent.metrics      import collect_node_telemetry
+    from node_agent.server_client import (
+        register_with_retry,
+        send_telemetry,
+        send_heartbeat,
+    )
+except ImportError:
+    from config import (
+        TELEMETRY_INTERVAL_SEC,
+        HEARTBEAT_INTERVAL_SEC,
+        ENABLE_HTTP_POST,
+        SERVER_BASE_URL,
+    )
+    from id_generator import get_or_create_node_id
+    from metrics      import collect_node_telemetry
+    from server_client import (
+        register_with_retry,
+        send_telemetry,
+        send_heartbeat,
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -104,15 +121,19 @@ def run_agent(
 
     # Patch config URLs if a custom base URL was provided via CLI
     if server_base_url != SERVER_BASE_URL:
-        import node_agent.config as _cfg
-        import node_agent.server_client as _sc
-        _cfg.SERVER_BASE_URL = server_base_url
-        _cfg.REGISTER_URL    = f"{server_base_url}/register"
-        _cfg.TELEMETRY_URL   = f"{server_base_url}/telemetry"
-        _cfg.HEARTBEAT_URL   = f"{server_base_url}/heartbeat"
-        _sc.REGISTER_URL     = _cfg.REGISTER_URL
-        _sc.TELEMETRY_URL    = _cfg.TELEMETRY_URL
-        _sc.HEARTBEAT_URL    = _cfg.HEARTBEAT_URL
+        for mod_name in ["node_agent.config", "config"]:
+            if mod_name in sys.modules:
+                mod = sys.modules[mod_name]
+                mod.SERVER_BASE_URL = server_base_url
+                mod.REGISTER_URL    = f"{server_base_url}/register"
+                mod.TELEMETRY_URL   = f"{server_base_url}/telemetry"
+                mod.HEARTBEAT_URL   = f"{server_base_url}/heartbeat"
+        for mod_name in ["node_agent.server_client", "server_client"]:
+            if mod_name in sys.modules:
+                mod = sys.modules[mod_name]
+                mod.REGISTER_URL    = f"{server_base_url}/register"
+                mod.TELEMETRY_URL   = f"{server_base_url}/telemetry"
+                mod.HEARTBEAT_URL   = f"{server_base_url}/heartbeat"
 
     print("=" * 65)
     print("[NODE AGENT] LIVE NODE MONITORING AGENT STARTING")
@@ -194,6 +215,10 @@ def main():
         help=f"Central server base URL (default: {SERVER_BASE_URL})"
     )
     parser.add_argument(
+        "--server-ip", type=str, default=None,
+        help="Central server IP address (e.g. 10.175.163.77), port defaults to 8000"
+    )
+    parser.add_argument(
         "--interval", type=int, default=TELEMETRY_INTERVAL_SEC,
         help=f"Telemetry interval in seconds (default: {TELEMETRY_INTERVAL_SEC})"
     )
@@ -211,8 +236,17 @@ def main():
     )
     args = parser.parse_args()
 
+    # If --server-ip is provided, format it into full URL
+    target_server_url = args.server_url
+    if args.server_ip:
+        ip = args.server_ip.strip()
+        if not ip.startswith("http://") and not ip.startswith("https://"):
+            target_server_url = f"http://{ip}:8000" if ":" not in ip else f"http://{ip}"
+        else:
+            target_server_url = ip
+
     run_agent(
-        server_base_url=args.server_url,
+        server_base_url=target_server_url,
         interval_sec=args.interval,
         heartbeat_sec=args.heartbeat,
         enable_post=not args.no_post,

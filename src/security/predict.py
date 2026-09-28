@@ -29,7 +29,27 @@ def load_security_model(model_path=DEFAULT_MODEL_PATH):
     return joblib.load(model_path)
 
 
-def _preprocess_input(df_input, pipeline):
+SECURITY_RISK_MAP = {
+    'Normal': 'LOW',
+    'Analysis': 'LOW',
+    'Reconnaissance': 'MEDIUM',
+    'Fuzzers': 'MEDIUM',
+    'Generic': 'MEDIUM',
+    'DoS': 'HIGH',
+    'Exploits': 'CRITICAL',
+    'Backdoor': 'CRITICAL',
+    'Backdoors': 'CRITICAL',
+    'Shellcode': 'CRITICAL',
+    'Worms': 'CRITICAL',
+}
+
+
+def _get_risk_level(category):
+    """Maps predicted attack category to risk level."""
+    return SECURITY_RISK_MAP.get(str(category).strip(), 'MEDIUM')
+
+
+def _preprocess_input(df_input, pipeline, strict=False):
     """Preprocesses input data, supporting both raw feature dicts and preprocessed DataFrames."""
     feature_names = pipeline['feature_names']
     
@@ -41,6 +61,11 @@ def _preprocess_input(df_input, pipeline):
     categorical_cols = pipeline['categorical_cols']
     scaler = pipeline['scaler']
     ohe = pipeline['one_hot_encoder']
+
+    if strict:
+        missing = [c for c in numeric_cols + categorical_cols if c not in df_input.columns]
+        if missing:
+            raise KeyError(f"Missing required columns in input: {missing[:5]} (total {len(missing)} missing)")
 
     # Handle missing categorical / numeric features gracefully
     df_clean = df_input.copy()
@@ -63,15 +88,15 @@ def _preprocess_input(df_input, pipeline):
     return X_processed
 
 
-def predict_attack(input_data, model_path=DEFAULT_MODEL_PATH, pipeline_path=DEFAULT_PIPELINE_PATH):
+def predict_attack(input_data, model_path=DEFAULT_MODEL_PATH, pipeline_path=DEFAULT_PIPELINE_PATH, strict=False):
     """
     Predicts network attack category and probability for input data.
     
     Supports:
     1. Single-record mode: input_data is a dict or single-row DataFrame.
-       Returns: {"prediction": str, "probability": float}
+       Returns: {"prediction": str, "probability": float, "risk_level": str}
     2. Batch mode: input_data is a CSV file path or multi-row DataFrame.
-       Returns: DataFrame with 'predicted_attack' and 'confidence_probability'.
+       Returns: DataFrame with 'predicted_attack', 'confidence_probability', and 'risk_level'.
     """
     pipeline = load_security_pipeline(pipeline_path)
     model = load_security_model(model_path)
@@ -81,7 +106,7 @@ def predict_attack(input_data, model_path=DEFAULT_MODEL_PATH, pipeline_path=DEFA
     # --- Mode 1: Single Record Prediction ---
     if isinstance(input_data, dict):
         df_single = pd.DataFrame([input_data])
-        X_proc = _preprocess_input(df_single, pipeline)
+        X_proc = _preprocess_input(df_single, pipeline, strict=strict)
         
         pred_idx = model.predict(X_proc)[0]
         try:
@@ -97,7 +122,8 @@ def predict_attack(input_data, model_path=DEFAULT_MODEL_PATH, pipeline_path=DEFA
 
         return {
             "prediction": str(pred_label),
-            "probability": round(confidence, 4)
+            "probability": round(confidence, 4),
+            "risk_level": _get_risk_level(pred_label)
         }
 
     # --- Mode 2: Batch Prediction (CSV Path or Multi-Row DataFrame) ---
@@ -112,9 +138,9 @@ def predict_attack(input_data, model_path=DEFAULT_MODEL_PATH, pipeline_path=DEFA
 
     if len(df_batch) == 1 and not isinstance(input_data, str):
         record_dict = df_batch.iloc[0].to_dict()
-        return predict_attack(record_dict, model_path=model_path, pipeline_path=pipeline_path)
+        return predict_attack(record_dict, model_path=model_path, pipeline_path=pipeline_path, strict=strict)
 
-    X_proc = _preprocess_input(df_batch, pipeline)
+    X_proc = _preprocess_input(df_batch, pipeline, strict=strict)
     pred_indices = model.predict(X_proc)
 
     try:
@@ -131,9 +157,43 @@ def predict_attack(input_data, model_path=DEFAULT_MODEL_PATH, pipeline_path=DEFA
     df_result = df_batch.copy()
     df_result['predicted_attack'] = pred_labels
     df_result['confidence_probability'] = np.round(confidences, 4)
+    df_result['risk_level'] = [_get_risk_level(lbl) for lbl in pred_labels]
 
     return df_result
 
 
 if __name__ == "__main__":
-    print("Security Prediction API initialized.")
+    import warnings
+    warnings.filterwarnings("ignore")
+
+    print("=== Security Prediction API ===")
+    test_csv = os.path.join(BASE_DIR, "data", "security", "UNSW_NB15_testing-set.csv")
+    if os.path.exists(test_csv):
+        df_sample = pd.read_csv(test_csv, nrows=5)
+        
+        # 1. Single-record demo
+        sample_row = df_sample.iloc[0].to_dict()
+        res = predict_attack(sample_row)
+        print("\n[Demo 1] Single-Record Prediction:")
+        print(f"  Prediction  : {res['prediction']}")
+        print(f"  Probability : {res['probability']:.4f}")
+        print(f"  Risk Level  : {res['risk_level']}")
+
+        # 2. Batch demo
+        df_res = predict_attack(df_sample)
+        print("\n[Demo 2] Batch Prediction (5 records):")
+        display_cols = [c for c in ['proto', 'service', 'state', 'dur', 'predicted_attack', 'confidence_probability', 'risk_level'] if c in df_res.columns]
+        print(df_res[display_cols].to_string(index=False))
+    else:
+        sample = {
+            "dur": 0.001,
+            "proto": "udp",
+            "service": "dns",
+            "state": "INT",
+            "spkts": 2,
+            "dpkts": 0,
+            "sbytes": 146,
+            "dbytes": 0,
+            "rate": 1000.0,
+        }
+        print("Sample prediction:", predict_attack(sample))

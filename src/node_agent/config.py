@@ -9,6 +9,31 @@ import os
 # Central Server Base URL  (no trailing slash)
 # ─────────────────────────────────────────────────────────────────────────────
 DEFAULT_SERVER_BASE_URL = "http://localhost:8000"
+
+# Check for a local server_url.txt or server_ip.txt in agent directory
+_AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_URL_FILE = os.path.join(_AGENT_DIR, "server_url.txt")
+_IP_FILE = os.path.join(_AGENT_DIR, "server_ip.txt")
+
+if os.path.exists(_URL_FILE):
+    try:
+        with open(_URL_FILE, "r", encoding="utf-8") as _f:
+            _raw = _f.read().strip()
+            if _raw:
+                if not _raw.startswith("http://") and not _raw.startswith("https://"):
+                    _raw = f"http://{_raw}:8000" if ":" not in _raw else f"http://{_raw}"
+                DEFAULT_SERVER_BASE_URL = _raw
+    except Exception:
+        pass
+elif os.path.exists(_IP_FILE):
+    try:
+        with open(_IP_FILE, "r", encoding="utf-8") as _f:
+            _raw = _f.read().strip()
+            if _raw:
+                DEFAULT_SERVER_BASE_URL = f"http://{_raw}:8000" if ":" not in _raw else f"http://{_raw}"
+    except Exception:
+        pass
+
 SERVER_BASE_URL = os.getenv("NODE_SERVER_URL", DEFAULT_SERVER_BASE_URL).rstrip("/")
 
 # Derived endpoint URLs  (do not override these manually)
@@ -30,7 +55,7 @@ HEARTBEAT_INTERVAL_SEC = int(os.getenv("NODE_HEARTBEAT_INTERVAL", str(DEFAULT_HE
 # ─────────────────────────────────────────────────────────────────────────────
 # HTTP / Retry behaviour
 # ─────────────────────────────────────────────────────────────────────────────
-HTTP_TIMEOUT_SEC = 4.0
+HTTP_TIMEOUT_SEC = float(os.getenv("NODE_HTTP_TIMEOUT", "15.0"))
 
 # Base back-off between retries (doubles up to MAX_RETRY_WAIT_SEC)
 RETRY_BASE_WAIT_SEC = 2
