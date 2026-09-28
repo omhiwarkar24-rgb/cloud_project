@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Node Agent Connection & Telemetry Lifecycle</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+    }
+    h1 { margin-top: 0; color: #58a6ff; font-size: 22px; }
+    p { color: #8b949e; margin-bottom: 24px; }
+    .container {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { margin-top: 0; font-size: 15px; }
+    .card.cyan h3 { color: #38bdf8; }
+    .card.amber h3 { color: #fbbf24; }
+    .card.rose h3 { color: #f43f5e; }
+    .card ul { margin: 0; padding-left: 20px; color: #8b949e; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>Live Node Agent Connection & Telemetry Lifecycle</h1>
+  <p>State transitions, exponential backoff, tick intervals, failover reconnection, and terminal exits.</p>
+
+  <div class="container">
+    <pre class="mermaid">
+stateDiagram-v2
+    direction LR
+
+    classDef active fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef waiting fill:#854d0e,stroke:#eab308,stroke-width:2px,color:#fff
+    classDef success fill:#065f46,stroke:#10b981,stroke-width:2px,color:#fff
+    classDef failure fill:#991b1b,stroke:#ef4444,stroke-width:2px,color:#fff
+    classDef neutral fill:#374151,stroke:#6b7280,stroke-width:2px,color:#fff
+
+    [*] --> init_identity
+    
+    state "Active Collection Rail" as Rail1 {
+      init_identity: 01. Identity Init<br/>(hostname + uuid4)
+      registering: 02. Registering<br/>(POST /register)
+      session_verified: 03. Verified<br/>(Heartbeat started)
+      collecting: 04. Collecting<br/>(sample CPU, RAM, Load)
+      streaming: 05. Ingested<br/>(200 OK Telemetry)
+
+      init_identity --> registering
+      registering --> session_verified: 200 OK
+      session_verified --> collecting
+      collecting --> streaming
+    }
+
+    state "Exponential Backoff & Interval Waits" as Rail2 {
+      backoff_wait: Backoff Wait<br/>(sleep 2s..64s)
+      interval_wait: Interval Wait<br/>(sleep 5s tick)
+
+      registering --> backoff_wait: Connection Refused
+      backoff_wait --> registering: Timer Expires
+      streaming --> interval_wait: Tick Ingested
+      interval_wait --> collecting: 5s Elapsed
+    }
+
+    state "Recovery & Reconnection" as Rail3 {
+      telemetry_failure: Ingest Warning<br/>(increment fails)
+      re_registering: Re-Registering<br/>(3 fails reconnect)
+
+      collecting --> telemetry_failure: Network/HTTP Error
+      telemetry_failure --> interval_wait: fails < 3
+      telemetry_failure --> re_registering: fails >= 3
+      re_registering --> session_verified: Restored (200 OK)
+      re_registering --> backoff_wait: Unreachable
+    }
+
+    state "Terminal Outcomes" as Rail4 {
+      clean_shutdown: Clean Shutdown<br/>(Ctrl+C SIGINT)
+      unrecoverable_fault: Fatal Exit<br/>(Crash)
+
+      collecting --> clean_shutdown: User SIGINT
+      collecting --> unrecoverable_fault: Fatal Error
+    }
+
+    clean_shutdown --> [*]
+    unrecoverable_fault --> [*]
+
+    class init_identity,registering,session_verified,collecting active
+    class streaming success
+    class backoff_wait,interval_wait waiting
+    class telemetry_failure,re_registering waiting
+    class clean_shutdown neutral
+    class unrecoverable_fault failure
+    </pre>
+  </div>
+
+  <div class="cards">
+    <div class="card cyan">
+      <h3>Active Collection Rail</h3>
+      <ul>
+        <li>Node identity derives from hardware hostname + persistent UUID4 (.node_id).</li>
+        <li>Background heartbeat thread maintains ONLINE presence in central registry.</li>
+        <li>Continuous sampling of CPU, RAM, Disk, Load 1/5/15m, and host uptime.</li>
+      </ul>
+    </div>
+    <div class="card amber">
+      <h3>Waits & Recoverable Failures</h3>
+      <ul>
+        <li>Initial registration uses exponential backoff doubling from 2s up to 60s.</li>
+        <li>Individual failed telemetry ticks are queued without crashing the agent.</li>
+        <li>After 3 consecutive failures, transparent re-registration triggers automatically.</li>
+      </ul>
+    </div>
+    <div class="card rose">
+      <h3>Explicit Terminal Endings</h3>
+      <ul>
+        <li>KeyboardInterrupt (Ctrl+C) initiates clean shutdown and stops the thread.</li>
+        <li>Never hides an ending: fatal exceptions exit directly to terminal failure state.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+</body>
+</html>

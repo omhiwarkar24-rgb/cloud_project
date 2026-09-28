@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "running",
+  "type": "lifecycle",
+  "quality": "showcase",
+  "startedAt": "2026-09-28T23:19:46.335Z",
+  "specification": {
+    "path": "D:\\proejctom\\adaptive_cloud_project\\docs\\node_agent_lifecycle.json",
+    "sha256": "5db2b2e676109b405ed702abed430936ca54e5755ea7b1eec0f203871d8fa767",
+    "bytes": 5013
+  },
+  "artifact": {
+    "path": "D:\\proejctom\\adaptive_cloud_project\\docs\\node_agent_lifecycle.html"
+  },
+  "stages": {},
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "D:\\proejctom\\adaptive_cloud_project\\docs\\node_agent_lifecycle.finalize.json",
+    "summaryReceipt": "D:\\proejctom\\adaptive_cloud_project\\docs\\node_agent_lifecycle.finalize-summary.json"
+  },
+  "visualReview": "not-requested"
+}

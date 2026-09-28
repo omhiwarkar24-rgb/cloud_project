@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>System Architecture & Diagrams Hub</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+    }
+    h1 { margin-top: 0; color: #58a6ff; font-size: 24px; }
+    p.lead { color: #8b949e; margin-bottom: 20px; font-size: 14px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #30363d;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #8b949e;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover {
+      color: #c9d1d9;
+    }
+    .tab-btn.active {
+      color: #58a6ff;
+      border-bottom: 2px solid #58a6ff;
+    }
+
+    /* Content Panels */
+    .panel {
+      display: none;
+    }
+    .panel.active {
+      display: block;
+    }
+    .diagram-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+
+    /* Info Cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .info-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .info-card h3 { margin-top: 0; font-size: 15px; }
+    .info-card.cyan h3 { color: #38bdf8; }
+    .info-card.amber h3 { color: #fbbf24; }
+    .info-card.emerald h3 { color: #34d399; }
+    .info-card.rose h3 { color: #f43f5e; }
+    .info-card ul { margin: 0; padding-left: 20px; color: #8b949e; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+  <h1>Adaptive Cloud Security & Predictive Maintenance — Diagrams Hub</h1>
+  <p class="lead">Complete architectural, sequence, dataflow, and lifecycle diagrams for the final project.</p>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(0)">🏛️ 1. System Architecture</button>
+    <button class="tab-btn" onclick="switchTab(1)">⚡ 2. Live Prediction Sequence</button>
+    <button class="tab-btn" onclick="switchTab(2)">📊 3. ML Training & Adaptive Dataflow</button>
+    <button class="tab-btn" onclick="switchTab(3)">⚙️ 4. Node Agent Lifecycle</button>
+  </div>
+
+  <!-- TAB 1: SYSTEM ARCHITECTURE -->
+  <div class="panel active" id="tab-0">
+    <div class="diagram-card">
+      <pre class="mermaid">
+flowchart TB
+    subgraph NODE["💻 Connected Node / Worker Laptop"]
+        direction TB
+        HW["Real Host Hardware<br/>(CPU, RAM, Disk, System Clock)"]
+        METRICS["psutil Metric Collector<br/>(CPU %, RAM %, Disk %, Load 1/5/15m, Uptime)"]
+        ID_GEN["Node ID Generator<br/>(.node_id persistent UUID4)"]
+        AGENT["Live Node Agent (collector.py)<br/>- 5s Telemetry Ingest Loop<br/>- 15s Heartbeat Thread"]
+        
+        HW --> METRICS
+        ID_GEN --> AGENT
+        METRICS --> AGENT
+    end
+
+    subgraph SERVER["🖥️ Central Server Laptop (Port 8000)"]
+        direction TB
+        REST["FastAPI Central Telemetry REST API<br/>(/register, /telemetry, /nodes, /live-health)"]
+        DB[("SQLite Database<br/>telemetry.db<br/>(nodes, telemetry, predictions)")]
+        HEALTH_IF["Isolation Forest Anomaly Model<br/>(Live Infrastructure Health Scorer)"]
+        
+        REST <--> DB
+        REST --> HEALTH_IF
+    end
+
+    subgraph ML["🧠 Machine Learning & Intelligence Engines"]
+        direction TB
+        SEC_MODEL["UNSW-NB15 Threat Detection<br/>- Random Forest Classifier (100% Acc)<br/>- XGBoost Classifier (99.8% Acc)"]
+        MNT_MODEL["Alibaba Cloud Predictive Maintenance<br/>- Random Forest Classifier (98.9% Acc)<br/>- Real Host Feature Mapping"]
+        RISK["Integrated Risk Fusion Engine<br/>Combined Risk = w_sec·SecRisk + w_fail·FailRisk"]
+        REC["Intelligent Prevention Engine<br/>Automated Action Priority & Protocol Guidance"]
+        DRIFT["KS-Test Data Drift Engine<br/>Two-Sample Kolmogorov-Smirnov (p &lt; 0.05)"]
+        RETRAIN["Adaptive Retraining Controller<br/>Candidate Training + Model Deployment Gate"]
+
+        SEC_MODEL --> RISK
+        MNT_MODEL --> RISK
+        RISK --> REC
+        DRIFT --> RETRAIN
+    end
+
+    subgraph DASH["📊 Interactive Frontend (Port 8501)"]
+        direction TB
+        UI["Streamlit 4-Tab Web Dashboard<br/>Tab 1: 🔐 Security Threat Detection<br/>Tab 2: ⚙️ Predictive Maintenance<br/>Tab 3: 🖥️ Live Infrastructure & Risk<br/>Tab 4: 📊 Adaptive Learning / Drift"]
+    end
+
+    AGENT -->|HTTP POST JSON (Local Wi-Fi)| REST
+    DB --> UI
+    UI --> SEC_MODEL
+    UI --> MNT_MODEL
+    UI --> DRIFT
+    RETRAIN -.->|Hot-Swap Model Weights| SEC_MODEL
+      </pre>
+    </div>
+    <div class="cards-grid">
+      <div class="info-card cyan">
+        <h3>Distributed Multi-Laptop Design</h3>
+        <ul>
+          <li>Central Server and Dashboard run on Host Laptop.</li>
+          <li>Node Agent runs on Worker Laptop streaming live telemetry.</li>
+          <li>Communicates over Wi-Fi/LAN via standard HTTP REST payloads.</li>
+        </ul>
+      </div>
+      <div class="info-card emerald">
+        <h3>Dual Trained ML Cores</h3>
+        <ul>
+          <li><strong>Security</strong>: UNSW-NB15 Network Intrusion Dataset (51 features).</li>
+          <li><strong>Maintenance</strong>: Alibaba Cloud Cluster Trace 2017 (11 features).</li>
+          <li>Isolation Forest runs unsupervised real-time anomaly detection.</li>
+        </ul>
+      </div>
+      <div class="info-card amber">
+        <h3>Closed-Loop Intelligence</h3>
+        <ul>
+          <li>Fused multi-hazard risk engine (Security Risk + Failure Risk).</li>
+          <li>Intelligent Prevention Engine generates automated actionable runbooks.</li>
+          <li>KS-Test evaluates continuous statistical feature distribution drift.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: SEQUENCE DIAGRAM -->
+  <div class="panel" id="tab-1">
+    <div class="diagram-card">
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant NA as Node Agent (Worker PC)
+    participant CS as Central Server (:8000)
+    participant DB as SQLite (telemetry.db)
+    participant UI as Streamlit UI (:8501)
+    participant ML as ML Model & Risk Engine
+
+    Note over NA,CS: Phase 1: Registration Handshake
+    NA->>CS: POST /register {node_id, hostname, hardware_info}
+    CS->>DB: INSERT / UPDATE nodes (status='ONLINE')
+    CS-->>NA: 200 OK {status: "registered"}
+
+    Note over NA,CS: Phase 2: Live Continuous Telemetry Stream
+    loop Every 5 Seconds
+        NA->>NA: Collect psutil metrics (CPU, RAM, Disk, Load 1/5/15m)
+        NA->>CS: POST /telemetry {node_id, metrics, timestamp}
+        CS->>DB: INSERT INTO telemetry (time-series)
+        CS->>DB: UPDATE nodes SET last_seen = NOW
+        CS-->>NA: 200 OK {status: "success"}
+    end
+
+    Note over UI,ML: Phase 3: Live ML Analysis
+    UI->>DB: Query active registered nodes (status = 'ONLINE')
+    DB-->>UI: Return live node fleet list
+    UI->>DB: Fetch latest telemetry for selected node
+    DB-->>UI: Return CPU, RAM, Disk, Load 1/5/15m, Uptime
+    UI->>ML: Pass live metrics into trained Random Forest model
+    ML->>ML: Feature scaling + predict_proba()
+    ML-->>UI: Output Failure Probability: 5.0% (Risk: LOW)
+    UI->>ML: Evaluate Integrated Risk (Security + Failure)
+    ML-->>UI: Overall Risk: LOW | Action: Routine Monitoring
+      </pre>
+    </div>
+    <div class="cards-grid">
+      <div class="info-card cyan">
+        <h3>Zero Dummy Data Guarantee</h3>
+        <ul>
+          <li>Dashboard queries database dynamically; zero hardcoded node lists.</li>
+          <li>Predictive Maintenance only runs when a real node is active and ONLINE.</li>
+          <li>Shows honest empty state when 0 node agents are connected.</li>
+        </ul>
+      </div>
+      <div class="info-card emerald">
+        <h3>End-to-End Real Telemetry</h3>
+        <ul>
+          <li>Real hardware counters flow directly from host OS into model inference.</li>
+          <li>Probabilities derived from trained model `predict_proba()`, not heuristics.</li>
+          <li>Failure risk and security risk combined mathematically with configurable weights.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: DATAFLOW / ML PIPELINE -->
+  <div class="panel" id="tab-2">
+    <div class="diagram-card">
+      <pre class="mermaid">
+flowchart LR
+    subgraph DATA["1. Training Datasets"]
+        D1["UNSW-NB15 Dataset<br/>(3000 Train / 1000 Test)<br/>45 Features"]
+        D2["Alibaba Trace 2017 Dataset<br/>(2250 Train / 750 Test)<br/>12 Columns"]
+    end
+
+    subgraph PREPROC["2. Preprocessing & Scaling"]
+        P1["Security Pipeline<br/>- OneHotEncoder (proto, state, service)<br/>- RobustScaler (numerical)"]
+        P2["Maintenance Pipeline<br/>- Feature Engineering (Resource Pressure)<br/>- StandardScaler & OneHot (Server_Type)"]
+    end
+
+    subgraph MODELS["3. Trained ML Models"]
+        M1["Security Baselines<br/>- Random Forest (100% Acc)<br/>- XGBoost (99.8% Acc)"]
+        M2["Maintenance Baselines<br/>- Random Forest (98.9% Acc)<br/>- XGBoost (99.2% Acc)"]
+    end
+
+    subgraph LIVE_INFER["4. Live Node Inference"]
+        L1["Real Node Telemetry<br/>(CPU, RAM, Disk, Load 1/5/15m)"]
+        MAPPING["Canonical Feature Mapping<br/>(Maps OS counters to Alibaba schema)"]
+        PRED["Inference Engine<br/>- Failure Probability %<br/>- Attack Classification"]
+    end
+
+    subgraph ADAPTIVE["5. Adaptive Learning Loop"]
+        KS["Two-Sample KS-Test Drift Engine<br/>(Compares reference vs live window)"]
+        GATE{"Drift Detected?<br/>(&gt; 15% features p &lt; 0.05)"}
+        RETRAIN["Retrain Candidate Model<br/>(Historical + Validated Stream)"]
+        DEPLOY["Deployment Gate<br/>Deploy if Candidate F1 &gt; Baseline"]
+    end
+
+    D1 --> P1 --> M1
+    D2 --> P2 --> M2
+
+    L1 --> MAPPING --> PRED
+    M2 --> PRED
+    M1 --> PRED
+
+    L1 --> KS --> GATE
+    GATE -- Yes --> RETRAIN --> DEPLOY
+    DEPLOY -.->|Hot-Swap active_adaptive_model.joblib| M1
+    GATE -- No --> L1
+      </pre>
+    </div>
+    <div class="cards-grid">
+      <div class="info-card emerald">
+        <h3>Feature Engineering Alignment</h3>
+        <ul>
+          <li>Predictive Maintenance model inputs match actual Node Agent metrics.</li>
+          <li>Derived metric `Resource_pressure = (CPU * RAM) / 100` matches Alibaba training schema.</li>
+          <li>Zero data leakage: preprocessor fit strictly on training splits.</li>
+        </ul>
+      </div>
+      <div class="info-card amber">
+        <h3>Statistical Data Drift (KS-Test)</h3>
+        <ul>
+          <li>Continuous evaluation of feature empirical cumulative distribution functions (ECDF).</li>
+          <li>Flags feature drift when Kolmogorov-Smirnov $p < 0.05$.</li>
+          <li>Candidate retraining executed with automated validation gate before deployment.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: NODE AGENT LIFECYCLE -->
+  <div class="panel" id="tab-3">
+    <div class="diagram-card">
+      <pre class="mermaid">
+stateDiagram-v2
+    direction LR
+
+    classDef active fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff
+    classDef waiting fill:#854d0e,stroke:#eab308,stroke-width:2px,color:#fff
+    classDef success fill:#065f46,stroke:#10b981,stroke-width:2px,color:#fff
+    classDef failure fill:#991b1b,stroke:#ef4444,stroke-width:2px,color:#fff
+    classDef neutral fill:#374151,stroke:#6b7280,stroke-width:2px,color:#fff
+
+    [*] --> init_identity
+    
+    state "Active Collection Rail" as Rail1 {
+      init_identity: 01. Identity Init<br/>(hostname + uuid4)
+      registering: 02. Registering<br/>(POST /register)
+      session_verified: 03. Verified<br/>(Heartbeat started)
+      collecting: 04. Collecting<br/>(sample CPU, RAM, Load)
+      streaming: 05. Ingested<br/>(200 OK Telemetry)
+
+      init_identity --> registering
+      registering --> session_verified: 200 OK
+      session_verified --> collecting
+      collecting --> streaming
+    }
+
+    state "Exponential Backoff & Interval Waits" as Rail2 {
+      backoff_wait: Backoff Wait<br/>(sleep 2s..64s)
+      interval_wait: Interval Wait<br/>(sleep 5s tick)
+
+      registering --> backoff_wait: Connection Refused
+      backoff_wait --> registering: Timer Expires
+      streaming --> interval_wait: Tick Ingested
+      interval_wait --> collecting: 5s Elapsed
+    }
+
+    state "Recovery & Reconnection" as Rail3 {
+      telemetry_failure: Ingest Warning<br/>(increment fails)
+      re_registering: Re-Registering<br/>(3 fails reconnect)
+
+      collecting --> telemetry_failure: Network/HTTP Error
+      telemetry_failure --> interval_wait: fails &lt; 3
+      telemetry_failure --> re_registering: fails &gt;= 3
+      re_registering --> session_verified: Restored (200 OK)
+      re_registering --> backoff_wait: Unreachable
+    }
+
+    state "Terminal Outcomes" as Rail4 {
+      clean_shutdown: Clean Shutdown<br/>(Ctrl+C SIGINT)
+      unrecoverable_fault: Fatal Exit<br/>(Crash)
+
+      collecting --> clean_shutdown: User SIGINT
+      collecting --> unrecoverable_fault: Fatal Error
+    }
+
+    clean_shutdown --> [*]
+    unrecoverable_fault --> [*]
+
+    class init_identity,registering,session_verified,collecting active
+    class streaming success
+    class backoff_wait,interval_wait waiting
+    class telemetry_failure,re_registering waiting
+    class clean_shutdown neutral
+    class unrecoverable_fault failure
+      </pre>
+    </div>
+    <div class="cards-grid">
+      <div class="info-card cyan">
+        <h3>Self-Healing Connection</h3>
+        <ul>
+          <li>Exponential backoff on unreachable server prevents network floods.</li>
+          <li>Automatic transparent re-registration if Central Server restarts.</li>
+          <li>Independent heartbeat thread decouples liveness tracking from metric ingestion.</li>
+        </ul>
+      </div>
+      <div class="info-card rose">
+        <h3>Graceful Termination</h3>
+        <ul>
+          <li>Ctrl+C gracefully stops background threads and cleans up sockets.</li>
+          <li>Terminal failure exits are never hidden or swallowed.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    function switchTab(index) {
+      const buttons = document.querySelectorAll('.tab-btn');
+      const panels = document.querySelectorAll('.panel');
+      
+      buttons.forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+      panels.forEach((p, i) => {
+        p.classList.toggle('active', i === index);
+      });
+    }
+  </script>
+</body>
+</html>

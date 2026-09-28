@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Live Node Agent Connection & Telemetry Lifecycle",
+    "output": "docs/node_agent_lifecycle.html",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "main", "label": "Active Collection Rail" },
+    { "id": "waiting", "label": "Exponential Backoff & Interval Waits" },
+    { "id": "recovery", "label": "Failover & Transparent Reconnection" },
+    { "id": "terminal", "label": "Terminal Outcomes" }
+  ],
+  "states": [
+    { "id": "init_identity", "type": "start", "label": "Identity Init", "sublabel": "hostname + uuid4", "lane": "main", "col": 0, "step": "01", "tag": "persistent" },
+    { "id": "registering", "type": "active", "label": "Registering", "sublabel": "POST /register", "lane": "main", "col": 1, "step": "02", "tag": "handshake" },
+    { "id": "session_verified", "type": "decision", "label": "Verified", "sublabel": "heartbeat started", "lane": "main", "col": 2, "step": "03", "tag": "online" },
+    { "id": "collecting", "type": "active", "label": "Collecting", "sublabel": "sample host metrics", "lane": "main", "col": 3, "step": "04", "tag": "psutil" },
+    { "id": "streaming", "type": "success", "label": "Ingested", "sublabel": "200 OK confirmed", "lane": "main", "col": 4, "step": "05", "tag": "healthy" },
+
+    { "id": "backoff_wait", "type": "waiting", "label": "Backoff Wait", "sublabel": "wait 2s..64s", "lane": "waiting", "col": 1, "tag": "exponential" },
+    { "id": "interval_wait", "type": "waiting", "label": "Interval Wait", "sublabel": "sleep 5s interval", "lane": "waiting", "col": 3, "tag": "periodic" },
+
+    { "id": "telemetry_failure", "type": "active", "label": "Ingest Warning", "sublabel": "increment fails", "lane": "recovery", "col": 3, "tag": "retryable" },
+    { "id": "re_registering", "type": "active", "label": "Re-Registering", "sublabel": "3 fails -> reconnect", "lane": "recovery", "col": 2, "tag": "failover" },
+
+    { "id": "clean_shutdown", "type": "neutral", "label": "Clean Shutdown", "sublabel": "Ctrl+C graceful exit", "lane": "terminal", "col": 0, "tag": "user-exit" },
+    { "id": "unrecoverable_fault", "type": "failure", "label": "Fatal Exit", "sublabel": "unhandled fault", "lane": "terminal", "col": 4, "tag": "fatal" }
+  ],
+  "transitions": [
+    { "from": "init_identity", "to": "registering" },
+    { "from": "registering", "to": "session_verified" },
+    { "from": "registering", "to": "backoff_wait", "variant": "security", "label": "refused / 5xx" },
+    { "from": "backoff_wait", "to": "registering", "label": "timer expires" },
+    { "from": "session_verified", "to": "collecting" },
+    { "from": "collecting", "to": "streaming" },
+    { "from": "streaming", "to": "interval_wait" },
+    { "from": "interval_wait", "to": "collecting" },
+    { "from": "collecting", "to": "telemetry_failure", "variant": "dashed", "label": "HTTP error" },
+    { "from": "telemetry_failure", "to": "interval_wait", "label": "retry next tick" },
+    { "from": "telemetry_failure", "to": "re_registering", "variant": "security", "label": "3 fails" },
+    { "from": "re_registering", "to": "session_verified", "label": "restored" },
+    { "from": "re_registering", "to": "backoff_wait", "variant": "security" },
+    { "from": "collecting", "to": "clean_shutdown", "variant": "emphasis", "label": "Ctrl+C" },
+    { "from": "collecting", "to": "unrecoverable_fault", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Active Collection Rail", "items": ["Node identity derives from hardware hostname + persistent UUID4", "Independent background heartbeat thread maintains node ONLINE status in central registry", "Continuous psutil collection of CPU, RAM, Disk, Load 1/5/15m, and host uptime"] },
+    { "dot": "amber", "title": "Waits & Recoverable Failures", "items": ["Initial registration uses exponential backoff doubling from 2s up to 60s", "Individual failed telemetry ticks are queued without crashing the agent process", "After 3 consecutive telemetry failures, transparent re-registration triggers automatically"] },
+    { "dot": "rose", "title": "Explicit Terminal Endings", "items": ["KeyboardInterrupt (Ctrl+C) initiates clean shutdown and stops the background thread", "Never hides an ending: fatal exceptions exit directly to terminal failure state"] }
+  ]
+}
