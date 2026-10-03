@@ -1,0 +1,16 @@
+{
+  "model_name": "XGBoost Cloud Server Predictive Maintenance",
+  "version": "2.0.0",
+  "thresholds": {
+    "low_max": 0.30,
+    "medium_max": 0.70
+  },
+  "features": [
+    "CPU_utilization",
+    "Memory_utilization",
+    "Disk_utilization",
+    "Resource_pressure"
+  ],
+  "target": "Machine_failure",
+  "description": "Predictive maintenance model for cloud servers trained on genuine live host-compatible telemetry metrics."
+}

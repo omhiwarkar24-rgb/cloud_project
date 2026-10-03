@@ -80,6 +80,7 @@ def root():
             "/adaptive/retraining",
             "/prevention/nodes",
             "/experiments/closed-loop", "/experiments/closed-loop/{node_id}",
+            "/alerts", "/alerts/active", "/alerts/{alert_id}/acknowledge",
         ]
     }
 
@@ -116,12 +117,41 @@ async def ingest_telemetry(request: Request):
         raise HTTPException(status_code=422, detail="Payload must be a JSON object containing 'node_id'")
         
     result = record_telemetry(payload)
+    maint_input = payload.get("metrics") if (payload.get("metrics") and isinstance(payload.get("metrics"), dict)) else payload
+
+    # Real ML Predictive-Maintenance Evaluation & Alerts
+    try:
+        from maintenance.predict import predict_failure
+        from maintenance.alerts import evaluate_node_for_alert
+
+        maint_pred = predict_failure(maint_input)
+        result["predictive_maintenance"] = {
+            "prediction": maint_pred.get("prediction"),
+            "failure_probability": maint_pred.get("failure_probability"),
+            "risk_level": maint_pred.get("risk_level"),
+            "timestamp": maint_pred.get("timestamp"),
+            "main_contributing_factors": maint_pred.get("main_contributing_factors", []),
+        }
+
+        # Real ML predictive-maintenance alert with deduplication & cooldown
+        alert = evaluate_node_for_alert(
+            node_id=payload["node_id"],
+            telemetry=maint_input,
+            maint_result=maint_pred,
+        )
+        if alert:
+            result["alert"] = alert
+    except Exception as maint_err:
+        result["maintenance_error"] = str(maint_err)
+
+    # Live Infrastructure Health (Isolation Forest baseline preserved)
     try:
         from maintenance.live_infrastructure_health import evaluate_and_store_live_health
         health = evaluate_and_store_live_health(payload, node_status="ONLINE")
         result["live_health"] = {
             "health_status": health.get("health_status"),
             "anomaly_probability": health.get("anomaly_probability"),
+            "failure_probability": health.get("failure_probability"),
             "model_name": health.get("model_name"),
             "model_version": health.get("model_version"),
         }
@@ -382,3 +412,66 @@ def get_closed_loop_experiment(node_id: str):
     from experiments.closed_loop_evaluation import get_latest_closed_loop_evaluation
     result = get_latest_closed_loop_evaluation(node_id)
     return JSONResponse(status_code=200, content=result or {"node_id": node_id, "result": None})
+
+
+# ─────────────────────────────────────────────
+# Predictive Maintenance Alert Endpoints
+# ─────────────────────────────────────────────
+@app.get("/alerts", summary="List predictive maintenance alerts (active and historical)")
+def list_alerts(
+    node_id: Optional[str] = Query(None, description="Filter by node ID"),
+    limit: int = Query(50, ge=1, le=200, description="Max alerts to return")
+):
+    from maintenance.alerts import fetch_alert_history, fetch_active_alerts
+    active = fetch_active_alerts()
+    history = fetch_alert_history(limit=limit, node_id=node_id)
+    return JSONResponse(status_code=200, content={
+        "active_count": len(active),
+        "alerts": history,
+        "active_alerts": active,
+        "history": history
+    })
+
+
+@app.get("/alerts/active", summary="List all currently active predictive maintenance alerts")
+def list_active_alerts(node_id: Optional[str] = Query(None, description="Filter by node ID")):
+    from maintenance.alerts import fetch_active_alerts
+    active = fetch_active_alerts()
+    if node_id:
+        active = [a for a in active if a.get("node_id") == node_id]
+    return JSONResponse(status_code=200, content={
+        "active_count": len(active),
+        "alerts": active,
+        "active_alerts": active
+    })
+
+
+@app.get("/nodes/{node_id}/alerts", summary="Get active predictive maintenance alert for a specific node")
+@app.get("/nodes/{node_id}/alerts/active", summary="Get active predictive maintenance alert for a specific node (alias)")
+def get_node_alerts(node_id: str):
+    from central_server.database import get_latest_active_alert_for_node
+    alert = get_latest_active_alert_for_node(node_id)
+    return JSONResponse(status_code=200, content={
+        "node_id": node_id,
+        "has_active_alert": alert is not None,
+        "alert": alert
+    })
+
+
+@app.post("/alerts/{alert_id}/acknowledge", summary="Acknowledge an active alert")
+def acknowledge_alert(alert_id: str):
+    from maintenance.alerts import acknowledge_alert_by_id
+    success = acknowledge_alert_by_id(alert_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found or already acknowledged.")
+    return JSONResponse(status_code=200, content={"status": "success", "alert_id": alert_id, "state": "ACKNOWLEDGED"})
+
+
+@app.post("/alerts/{alert_id}/resolve", summary="Resolve an alert")
+def resolve_alert(alert_id: str):
+    from maintenance.alerts import resolve_alert_by_id
+    success = resolve_alert_by_id(alert_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Alert '{alert_id}' not found.")
+    return JSONResponse(status_code=200, content={"status": "success", "alert_id": alert_id, "state": "RESOLVED"})
+

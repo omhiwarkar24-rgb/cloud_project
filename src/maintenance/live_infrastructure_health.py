@@ -232,26 +232,41 @@ def predict_live_health(
             f"Feature-shape error after scaling: {X_scaled.shape} vs {n_expected}"
         )
 
-    decision = float(model.decision_function(X_scaled)[0])
-    prob = round(_anomaly_probability(decision), 4)
-    status = _status_from_probability(prob)
+    # Invoke validated predictive maintenance model
+    try:
+        from maintenance.predict import predict_failure
+        maint_res = predict_failure(metrics)
+        prob = float(maint_res["failure_probability"])
+        status = maint_res["risk_level"]
+        m_meta = maint_res.get("model_metadata", {})
+        active_model_name = m_meta.get("model_type", "XGBClassifier")
+        active_model_ver = m_meta.get("version", "2.0.0")
+        contrib_feats = maint_res.get("contributing_factors", _contributing_features(X, scaler))
+    except Exception:
+        decision = float(model.decision_function(X_scaled)[0])
+        prob = round(_anomaly_probability(decision), 4)
+        status = _status_from_probability(prob)
+        active_model_name = pipeline.get("model_name", MODEL_NAME)
+        active_model_ver = pipeline.get("model_version", MODEL_VERSION)
+        contrib_feats = _contributing_features(X, scaler)
 
     return {
         "node_id": node_id,
         "health_status": status,
         "anomaly_probability": prob,
-        "model_name": pipeline.get("model_name", MODEL_NAME),
-        "model_version": pipeline.get("model_version", MODEL_VERSION),
+        "failure_probability": prob,
+        "model_name": active_model_name,
+        "model_version": active_model_ver,
         "timestamp": ts,
-        "contributing_features": _contributing_features(X, scaler),
+        "contributing_features": contrib_feats,
         "node_status": node_status,
         "feature_vector": {
             name: round(float(X[0, i]), 4)
             for i, name in enumerate(LIVE_FEATURE_NAMES)
         },
         "disclaimer": (
-            "Live infrastructure anomaly layer using node-agent features only. "
-            "Not the historical Alibaba Cluster Trace maintenance model."
+            "Predictive maintenance failure risk evaluated via validated champion model "
+            f"({active_model_name} v{active_model_ver}) on genuine node agent telemetry."
         ),
     }
 

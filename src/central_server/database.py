@@ -212,6 +212,33 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_closed_loop_node_time
             ON closed_loop_experiments(node_id, timestamp)
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS maintenance_alerts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                alert_id TEXT NOT NULL UNIQUE,
+                node_id TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                last_seen_at TEXT NOT NULL,
+                failure_probability REAL NOT NULL,
+                risk_level TEXT NOT NULL,
+                telemetry_summary TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                recommended_action TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'ACTIVE',
+                repeat_count INTEGER NOT NULL DEFAULT 1,
+                resolved_at TEXT,
+                FOREIGN KEY (node_id) REFERENCES nodes(node_id)
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_alerts_node_status
+            ON maintenance_alerts(node_id, status)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_alerts_timestamp
+            ON maintenance_alerts(timestamp)
+        """)
         
         conn.commit()
     print(f"[CENTRAL DB]: Initialized SQLite database at '{db_path}'")
@@ -642,3 +669,165 @@ def _row_to_live_health(row: sqlite3.Row) -> Dict[str, Any]:
         "feature_vector": fvec,
         "node_status": row["node_status"],
     }
+
+
+def _row_to_alert(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "id": row["id"],
+        "alert_id": row["alert_id"],
+        "node_id": row["node_id"],
+        "timestamp": row["timestamp"],
+        "last_seen_at": row["last_seen_at"],
+        "failure_probability": float(row["failure_probability"]),
+        "risk_level": row["risk_level"],
+        "telemetry_summary": json.loads(row["telemetry_summary"]) if row["telemetry_summary"] else {},
+        "reason": row["reason"],
+        "recommended_action": row["recommended_action"],
+        "status": row["status"],
+        "repeat_count": int(row["repeat_count"]),
+        "resolved_at": row["resolved_at"]
+    }
+
+
+def save_maintenance_alert(alert_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Persist a new predictive-maintenance alert."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO maintenance_alerts (
+                alert_id, node_id, timestamp, last_seen_at, failure_probability,
+                risk_level, telemetry_summary, reason, recommended_action,
+                status, repeat_count, resolved_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            alert_data["alert_id"],
+            alert_data["node_id"],
+            alert_data["timestamp"],
+            alert_data.get("last_seen_at", alert_data["timestamp"]),
+            float(alert_data["failure_probability"]),
+            alert_data["risk_level"],
+            json.dumps(alert_data.get("telemetry_summary", {})),
+            alert_data["reason"],
+            alert_data["recommended_action"],
+            alert_data.get("status", "ACTIVE"),
+            int(alert_data.get("repeat_count", 1)),
+            alert_data.get("resolved_at")
+        ))
+        conn.commit()
+    return alert_data
+
+
+def update_maintenance_alert_repeat(
+    alert_id: str,
+    new_prob: float,
+    new_risk: str,
+    new_telemetry: Dict[str, Any],
+    last_seen_at: str
+) -> None:
+    """Updates repeat count and last_seen timestamp on an existing active alert (deduplication)."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE maintenance_alerts
+            SET repeat_count = repeat_count + 1,
+                last_seen_at = ?,
+                failure_probability = ?,
+                risk_level = ?,
+                telemetry_summary = ?
+            WHERE alert_id = ? AND status = 'ACTIVE'
+        """, (
+            last_seen_at,
+            float(new_prob),
+            new_risk,
+            json.dumps(new_telemetry or {}),
+            alert_id
+        ))
+        conn.commit()
+
+
+def get_latest_active_alert_for_node(node_id: str) -> Optional[Dict[str, Any]]:
+    """Return the most recent ACTIVE maintenance alert for a specific node, or None."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT * FROM maintenance_alerts
+                WHERE node_id = ? AND status = 'ACTIVE'
+                ORDER BY timestamp DESC, id DESC
+                LIMIT 1
+            """, (node_id,))
+            row = cursor.fetchone()
+            if row:
+                return _row_to_alert(row)
+        except sqlite3.OperationalError:
+            return None
+    return None
+
+
+def get_active_maintenance_alerts() -> List[Dict[str, Any]]:
+    """Return all currently ACTIVE maintenance alerts across the fleet."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT * FROM maintenance_alerts
+                WHERE status = 'ACTIVE'
+                ORDER BY last_seen_at DESC, id DESC
+            """)
+            rows = cursor.fetchall()
+            return [_row_to_alert(r) for r in rows]
+        except sqlite3.OperationalError:
+            return []
+
+
+def get_all_maintenance_alerts(limit: int = 100, node_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Return full historical maintenance alerts log."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            if node_id:
+                cursor.execute("""
+                    SELECT * FROM maintenance_alerts
+                    WHERE node_id = ?
+                    ORDER BY id DESC
+                    LIMIT ?
+                """, (node_id, limit))
+            else:
+                cursor.execute("""
+                    SELECT * FROM maintenance_alerts
+                    ORDER BY id DESC
+                    LIMIT ?
+                """, (limit,))
+            rows = cursor.fetchall()
+            return [_row_to_alert(r) for r in rows]
+        except sqlite3.OperationalError:
+            return []
+
+
+def acknowledge_maintenance_alert(alert_id: str) -> bool:
+    """Mark an active alert as ACKNOWLEDGED."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE maintenance_alerts
+            SET status = 'ACKNOWLEDGED'
+            WHERE alert_id = ?
+        """, (alert_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+
+
+def resolve_maintenance_alert(alert_id: str, resolved_at: Optional[str] = None) -> bool:
+    """Mark an alert as RESOLVED."""
+    from datetime import datetime, timezone
+    now_iso = resolved_at or datetime.now(timezone.utc).isoformat()
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE maintenance_alerts
+            SET status = 'RESOLVED', resolved_at = ?
+            WHERE alert_id = ?
+        """, (now_iso, alert_id))
+        conn.commit()
+        return cursor.rowcount > 0
+

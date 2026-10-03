@@ -1,6 +1,6 @@
 Model,Accuracy,Precision,Recall,F1-Score,ROC-AUC,Model_Path,CM_Path
-Logistic Regression,0.968,0.2727272727272727,1.0,0.42857142857142855,0.9955015744489428,models/maintenance/logistic_regression_maintenance.joblib,results/maintenance/plots/cm_logistic_regression.png
-Decision Tree,0.9853333333333333,0.4,0.4444444444444444,0.42105263157894735,0.7181736392262709,models/maintenance/decision_tree_maintenance.joblib,results/maintenance/plots/cm_decision_tree.png
-Random Forest,0.9893333333333333,0.5384615384615384,0.7777777777777778,0.6363636363636364,0.9929524666366771,models/maintenance/random_forest_maintenance.joblib,results/maintenance/plots/cm_random_forest.png
-XGBoost,0.992,0.6,1.0,0.75,0.9946018893387314,models/maintenance/xgboost_maintenance.joblib,results/maintenance/plots/cm_xgboost.png
-MLP Neural Network,0.9893333333333333,0.5555555555555556,0.5555555555555556,0.5555555555555556,0.9739091318038686,models/maintenance/mlp_neural_network_maintenance.joblib,results/maintenance/plots/cm_mlp_neural_network.png
+Logistic Regression,0.9613333333333334,0.23684210526315788,1.0,0.3829787234042553,0.9959514170040487,models/maintenance/logistic_regression_maintenance.joblib,results/maintenance/plots/cm_logistic_regression.png
+Decision Tree,0.9906666666666667,0.5714285714285714,0.8888888888888888,0.6956521739130435,0.9403958614484931,models/maintenance/decision_tree_maintenance.joblib,results/maintenance/plots/cm_decision_tree.png
+Random Forest,0.988,0.5,0.6666666666666666,0.5714285714285714,0.9937771779877043,models/maintenance/random_forest_maintenance.joblib,results/maintenance/plots/cm_random_forest.png
+XGBoost,0.992,0.6,1.0,0.75,0.9962513120407857,models/maintenance/xgboost_maintenance.joblib,results/maintenance/plots/cm_xgboost.png
+MLP Neural Network,0.9893333333333333,0.5555555555555556,0.5555555555555556,0.5555555555555556,0.9953516269305743,models/maintenance/mlp_neural_network_maintenance.joblib,results/maintenance/plots/cm_mlp_neural_network.png

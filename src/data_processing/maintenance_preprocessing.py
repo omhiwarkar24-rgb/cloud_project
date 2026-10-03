@@ -139,16 +139,9 @@ def preprocess_alibaba_maintenance(alibaba_dir=ALIBABA_DIR,
     X_train_raw['Resource_pressure'] = (X_train_raw['CPU_utilization'] * X_train_raw['Memory_utilization']) / 100.0
     X_test_raw['Resource_pressure'] = (X_test_raw['CPU_utilization'] * X_test_raw['Memory_utilization']) / 100.0
 
-    categorical_cols = ['Server_Type']
-    numeric_cols = [c for c in X_train_raw.columns if c not in categorical_cols]
-
-    # Fit OneHotEncoder ONLY on Train
-    ohe = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
-    ohe.fit(X_train_raw[categorical_cols])
-
-    train_cat = ohe.transform(X_train_raw[categorical_cols])
-    test_cat = ohe.transform(X_test_raw[categorical_cols])
-    encoded_cat_names = list(ohe.get_feature_names_out(categorical_cols))
+    categorical_cols = []
+    numeric_cols = ['CPU_utilization', 'Memory_utilization', 'Disk_utilization', 'Resource_pressure']
+    feature_names = list(numeric_cols)
 
     # Fit StandardScaler ONLY on Train
     scaler = StandardScaler()
@@ -157,10 +150,8 @@ def preprocess_alibaba_maintenance(alibaba_dir=ALIBABA_DIR,
     train_num = scaler.transform(X_train_raw[numeric_cols])
     test_num = scaler.transform(X_test_raw[numeric_cols])
 
-    X_train_processed = np.hstack([train_num, train_cat])
-    X_test_processed = np.hstack([test_num, test_cat])
-
-    feature_names = numeric_cols + encoded_cat_names
+    X_train_processed = train_num
+    X_test_processed = test_num
 
     df_train_proc = pd.DataFrame(X_train_processed, columns=feature_names)
     df_train_proc['Machine_failure'] = y_train
@@ -177,13 +168,22 @@ def preprocess_alibaba_maintenance(alibaba_dir=ALIBABA_DIR,
     print(f"[ALIBABA PREPROCESSING] Train processed exported: {train_out_path}")
     print(f"[ALIBABA PREPROCESSING] Test processed exported: {test_out_path}")
 
+    from datetime import datetime, timezone
     pipeline_obj = {
-        'one_hot_encoder': ohe,
         'scaler': scaler,
         'numeric_cols': numeric_cols,
         'categorical_cols': categorical_cols,
         'feature_names': feature_names,
-        'imbalance_ratio': ratio
+        'imbalance_ratio': ratio,
+        'metadata': {
+            'model_name': 'Cloud Server Predictive Maintenance',
+            'training_features': feature_names,
+            'target': 'Machine_failure (0=Healthy, 1=Failure)',
+            'preprocessing': 'StandardScaler (fitted strictly on training split)',
+            'version': '2.0.0',
+            'training_date': datetime.now(timezone.utc).isoformat(),
+            'class_imbalance_ratio': round(ratio, 2)
+        }
     }
     pipeline_path = os.path.join(model_dir, "preprocessing_pipeline.joblib")
     joblib.dump(pipeline_obj, pipeline_path)

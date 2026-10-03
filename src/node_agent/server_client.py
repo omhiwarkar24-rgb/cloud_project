@@ -9,6 +9,8 @@ Handles:
   - Transparent reconnection — callers never need to handle URLError
 """
 
+from __future__ import annotations
+
 import json
 import time
 import socket
@@ -17,6 +19,7 @@ import sys
 import platform
 import urllib.request
 import urllib.error
+from typing import Optional, Dict, Any, Tuple
 
 _AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _AGENT_DIR not in sys.path:
@@ -131,6 +134,15 @@ def register_with_retry(node_id: str) -> bool:
 # Telemetry
 # ─────────────────────────────────────────────────────────────────────────────
 
+def send_telemetry_with_response(payload: dict) -> tuple[bool, Optional[dict]]:
+    """
+    Sends one telemetry snapshot.
+    Returns (ok, response_body) where response_body includes real ML predictions
+    and any active predictive maintenance alert for this node.
+    """
+    return _post_json(TELEMETRY_URL, payload)
+
+
 def send_telemetry(payload: dict) -> bool:
     """
     Sends one telemetry snapshot.  Returns True on success, False otherwise.
@@ -138,6 +150,26 @@ def send_telemetry(payload: dict) -> bool:
     """
     ok, _ = _post_json(TELEMETRY_URL, payload)
     return ok
+
+
+def fetch_node_alert(node_id: str) -> Optional[dict]:
+    """
+    Queries Central Server directly for active alerts on this node.
+    """
+    try:
+        from node_agent.config import SERVER_BASE_URL, HTTP_TIMEOUT_SEC
+    except ImportError:
+        from config import SERVER_BASE_URL, HTTP_TIMEOUT_SEC
+    url = f"{SERVER_BASE_URL}/nodes/{node_id}/alerts"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "LiveNodeAgent/2.0"}, method="GET")
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_SEC) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data.get("has_active_alert"):
+                return data.get("alert")
+    except Exception:
+        pass
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -51,8 +51,11 @@ try:
     from node_agent.server_client import (
         register_with_retry,
         send_telemetry,
+        send_telemetry_with_response,
         send_heartbeat,
+        fetch_node_alert,
     )
+    from node_agent.notifier import NodeAlertNotifier
 except ImportError:
     from config import (
         TELEMETRY_INTERVAL_SEC,
@@ -65,8 +68,11 @@ except ImportError:
     from server_client import (
         register_with_retry,
         send_telemetry,
+        send_telemetry_with_response,
         send_heartbeat,
+        fetch_node_alert,
     )
+    from notifier import NodeAlertNotifier
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -157,6 +163,7 @@ def run_agent(
     time.sleep(0.5)
 
     # ── 4. Telemetry loop ────────────────────────────────────────────────────
+    notifier = NodeAlertNotifier(node_id)
     consecutive_failures = 0
     MAX_FAILURES_BEFORE_REREGISTER = 3
     tick = 0
@@ -178,10 +185,14 @@ def run_agent(
                 print(f"  CPU Temp : {m['cpu_temperature_c']} deg C")
 
             if enable_post:
-                ok = send_telemetry(payload)
+                ok, resp = send_telemetry_with_response(payload)
                 if ok:
                     print("  Telemetry : sent [OK]")
                     consecutive_failures = 0
+
+                    # ── Process Server-Side Predictive Maintenance Alert ──
+                    alert_data = resp.get("alert") if isinstance(resp, dict) else None
+                    notifier.process_server_alert(alert_data)
                 else:
                     consecutive_failures += 1
                     print(f"  Telemetry : FAILED (consecutive={consecutive_failures})")
